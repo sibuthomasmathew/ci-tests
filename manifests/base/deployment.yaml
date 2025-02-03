@@ -24,7 +24,7 @@ spec:
       serviceAccountName: web-app
       containers:
         - name: web-app
-          image: ghcr.io/sibuthomasmathew/ci-tests:web-app
+          image: image-name
           ports:
             - name: http
               containerPort: 8080

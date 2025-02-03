@@ -51,55 +51,62 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           file: Dockerfile
           platforms: linux/amd64
-#
-#      - name: Run Trivy vulnerability scanner in image mode
-#        uses: aquasecurity/trivy-action@0.20.0
-#        with:
-#          image-ref: '${{ steps.meta.outputs.tags }}'
-#          scan-type: 'image'
-#          format: 'table'
-#          exit-code: '1'
-#          ignore-unfixed: true
-#          vuln-type: 'os,library'
-#          severity: 'CRITICAL,HIGH'
-#
-#      - name: Install kind & kubectl
-#        run: |
-#          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-#          chmod +x ./kind
-#          sudo mv ./kind /usr/local/bin/kind
-#          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-#          chmod +x kubectl
-#          sudo mv kubectl /usr/local/bin/
-#
-#      - name: Create kind Cluster
-#        run: |
-#          kind create cluster --name test-cluster
-#
-#      - name: Load Image into kind
-#        run: |
-#          # docker pull ${{ steps.meta.outputs.tags }}
-#          # kind load docker-image ${{ steps.meta.outputs.tags }} --name test-cluster
-#          docker pull ghcr.io/sibuthomasmathew/ci-tests:web-app-5
-#          kind load docker-image ghcr.io/sibuthomasmathew/ci-tests:web-app-5 --name test-cluster
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Deploy to kind
-#        run: |
-#          kubectl apply -k manifests/base
-#
-#      - name: Wait for Deployment to be Ready
-#        run: |
-#          kubectl wait --for=condition=available --timeout=60s deployment/${{ env.APP }}
-#
-#      - name: Run Test to Verify Application
-#        run: |
-#          kubectl run curl-pod --image=curlimages/curl --restart=Never -- curl -s http:/web-app.default.svc:8080
-#          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded  --timeout=30s pod/curl-pod
-#          kubectl logs curl-pod
-#
-#      - name: Cleanup kind Cluster
-#        if: always()
-#        run: |
-#          kind delete cluster --name test-cluster
+
+      - name: Run Trivy vulnerability scanner in image mode
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: '${{ steps.meta.outputs.tags }}'
+          scan-type: 'image'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Install kind, kubectl & kustomize
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Create kind Cluster
+        run: |
+          kind create cluster --name test-cluster
+
+      - name: Load Image into kind
+        run: |
+          docker pull ${{ steps.meta.outputs.tags }}
+          kind load docker-image ${{ steps.meta.outputs.tags }} --name test-cluster
+
+      - uses: actions/checkout@v4
+
+      - name: "Update Deployment Image Tag" # [3]
+        working-directory: "manifests/base"
+        run: |
+          kustomize edit set image image-name=${{ steps.meta.outputs.tags }}
+
+      - name: Deploy to kind
+        run: |
+          kubectl apply -k manifests/base
+
+      - name: Wait for Deployment to be Ready
+        run: |
+          kubectl wait --for=condition=available --timeout=60s deployment/${{ env.APP }}
+
+      - name: Run Test to Verify Application
+        run: |
+          kubectl run curl-pod --image=curlimages/curl --restart=Never -- curl -s http:/web-app.default.svc:8080
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded  --timeout=30s pod/curl-pod
+          kubectl logs curl-pod
+
+      - name: Cleanup kind Cluster
+        if: always()
+        run: |
+          kind delete cluster --name test-cluster
