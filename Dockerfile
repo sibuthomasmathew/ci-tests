@@ -7,8 +7,10 @@ WORKDIR /app
 # Install required utilities (curl, tar)
 RUN apk add --no-cache curl tar
 
+ARG VERSION
+
 # Download the tar file and extract it
-RUN curl -L -O https://github.com/sibuthomasmathew/golang-web-apps/releases/download/v0.0.2/web-app.tar.gz \
+RUN curl -L -O https://github.com/sibuthomasmathew/golang-web-apps/releases/download/${VERSION}/web-app.tar.gz \
     && tar -xzvf web-app.tar.gz \
     && rm -f web-app.tar.gz  # Clean up
 
