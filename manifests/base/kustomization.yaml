@@ -7,6 +7,6 @@ resources:
   - service-account.yaml
 
 images:
-- name: ghcr.io/sibuthomasmathew/ci-tests:web-app
+- name: image-name
   newName: ghcr.io/sibuthomasmathew/ci-tests
   newTag: web-app-5
