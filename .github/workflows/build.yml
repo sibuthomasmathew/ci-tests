@@ -53,7 +53,7 @@ jobs:
           platforms: linux/amd64
 
       - name: Run Trivy vulnerability scanner in image mode
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: '${{ steps.meta.outputs.tags }}'
           scan-type: 'image'
